@@ -48,6 +48,7 @@ instance XPrompt RunOrRaisePrompt where
 runOrRaisePrompt :: XPConfig -> X ()
 runOrRaisePrompt c = do cmds <- io getCommands
                         mkXPrompt RRP c (getShellCompl cmds) open
+
 open :: String -> X ()
 open path = io (isNormalFile path) >>= \b ->
             if b
@@ -60,12 +61,15 @@ open path = io (isNormalFile path) >>= \b ->
       getTarget x = (x,isApp x)
 
 isApp :: String -> Query Bool
-isApp "firefox"     = className =? "Firefox-bin"     <||> className =? "Firefox"
-isApp "thunderbird" = className =? "Thunderbird-bin" <||> className =? "Thunderbird"
 isApp x = liftM2 (==) pid $ pidof x
 
 pidof :: String -> Query Int
-pidof x = io $ (runProcessWithInput "pidof" [x] [] >>= readIO) `catch` (\_ -> return 0)
+pidof x = io $ runPidof x `catch` (\_ -> tryWorkarounds x)
+  where runPidof name = (runProcessWithInput "pidof" [name] [] >>= readIO)
+        tryWorkarounds "firefox" = mozWorkaround "firefox"
+        tryWorkarounds "thunderbird" = mozWorkaround "thunderbird"
+        tryWorkarounds _ = return 0
+        mozWorkaround pfx = runPidof (pfx++"-bin") `catch` (\_ -> return 0)
 
 pid :: Query Int
 pid = ask >>= (\w -> liftX $ withDisplay $ \d -> getPID d w)
