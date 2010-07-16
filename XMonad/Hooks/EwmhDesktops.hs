@@ -81,8 +81,8 @@ ewmhDesktopsLogHookCustom f = withWindowSet $ \s -> do
     setDesktopNames (map W.tag ws)
 
     -- all windows, with focused windows last
-    let wins =  nub . concatMap (maybe [] (\(W.Stack x l r)-> reverse l ++ r ++ [x]) . W.stack) $ ws
-    setClientList wins
+    let flatten = \(W.Stack x l r) -> reverse l ++ r ++ [x]
+    setClientList . nub . concatMap (maybe [] flatten . W.stack) $ ws
 
     -- Current desktop
     case (elemIndex (W.currentTag s) $ map W.tag ws) of
@@ -91,13 +91,10 @@ ewmhDesktopsLogHookCustom f = withWindowSet $ \s -> do
         setCurrentDesktop curr
 
         -- Per window Desktop
-        -- To make gnome-panel accept our xinerama stuff, we display
-        -- all visible windows on the current desktop.
-        forM_ (W.current s : W.visible s) $ \x ->
-            forM_ (W.integrate' (W.stack (W.workspace x))) $ \win -> do
-                setWindowDesktop win curr
+        let wins = (W.integrate' . W.stack . W.workspace . W.current) s
+        forM_ wins $ \win -> do setWindowDesktop win curr
 
-    forM_ (W.hidden s) $ \w ->
+    forM_ (W.hidden s ++ map W.workspace (W.visible s)) $ \w ->
         case elemIndex (W.tag w) (map W.tag ws) of
           Nothing -> return ()
           Just wn -> forM_ (W.integrate' (W.stack w)) $ \win -> do
