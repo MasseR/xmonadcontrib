@@ -316,7 +316,7 @@ removeColonPrefix s = if ':' `elem` s then drop 1 $ dropWhile (':' /=) s else s
 
    Example:
 
-> multiEngine = intelligent (wikipedia !> mathworld !> (prefixAware google))
+> multiEngine = intelligent (wikipedia !> (mathworld !> ((prefixAware google))))
 
   Now if you type \"wiki:Haskell\" it will search for \"Haskell\" in Wikipedia,
   \"mathworld:integral\" will search mathworld, and everything else will fall back to
